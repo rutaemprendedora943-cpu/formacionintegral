@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formación Integral - Sistema de Gestión</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        corporate: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- JsBarcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+
+    <style>
+        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sidebar-transition { transition: transform 0.3s ease-in-out; }
+        .tab-btn.active { border-bottom: 2px solid #1e40af; color: #1e40af; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <!-- RECURSOS OCULTOS (LOGO Y CANVAS PARA CODIGOS DE BARRAS) -->
+    <img id="corporate-logo" src="logo.jpg.jpeg" class="hidden" crossorigin="anonymous" alt="Logo Formacion Integral">
+    <canvas id="hidden-barcode-canvas" class="hidden"></canvas>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-view" class="min-h-screen flex items-center justify-center bg-corporate-900 p-4 fade-in hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-corporate-100 text-corporate-900 mb-4">
+                    <i class="fa-solid fa-graduation-cap text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">Formación Integral</h1>
+                <p class="text-gray-500 text-sm mt-1">Sistema de Gestión Académica y Financiera</p>
+            </div>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-envelope text-gray-400"></i>
+                        </div>
+                        <input type="email" id="login-email" required class="focus:ring-corporate-500 focus:border-corporate-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="correo@ejemplo.com">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-lock text-gray-400"></i>
+                        </div>
+                        <input type="password" id="login-password" required class="focus:ring-corporate-500 focus:border-corporate-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="••••••••">
+                    </div>
+                </div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-corporate-800 hover:bg-corporate-900">
+                    Ingresar al Sistema
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- INVITE REGISTRATION SCREEN -->
+    <div id="invite-view" class="min-h-screen flex items-center justify-center bg-corporate-900 p-4 fade-in hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-700 mb-4">
+                    <i class="fa-solid fa-user-plus text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">Invitación Recibida</h1>
+                <p class="text-gray-500 text-sm mt-1">Regístrate para unirte al equipo de Formación Integral</p>
+                <p class="text-xs font-bold text-corporate-800 mt-2 bg-corporate-50 py-1 rounded">Rol Asignado: <span id="invite-role-display"></span></p>
+            </div>
+            <form id="invite-form" class="space-y-4">
+                <input type="hidden" id="invite-token">
+                <input type="hidden" id="invite-role">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                    <input type="text" id="reg-name" required class="mt-1 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border" placeholder="Tu nombre">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                    <input type="email" id="reg-email" required class="mt-1 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border" placeholder="tu@correo.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Crear Contraseña</label>
+                    <input type="password" id="reg-password" required class="mt-1 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                    Completar Registro y Entrar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-view" class="hidden min-h-screen flex bg-gray-50">
+        
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-corporate-900 text-white transform -translate-x-full md:translate-x-0 sidebar-transition flex flex-col h-screen">
+            <div class="flex items-center justify-between h-16 px-4 bg-corporate-800">
+                <span class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-graduation-cap"></i> Formación Integral</span>
+                <button id="close-sidebar-btn" class="md:hidden text-gray-300 hover:text-white">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <nav class="flex-1 px-2 py-4 space-y-2 overflow-y-auto" id="sidebar-nav">
+                <!-- Links generados por JS según el rol -->
+            </nav>
+            <div class="p-4 bg-corporate-800 border-t border-corporate-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-full bg-white text-corporate-900 flex items-center justify-center font-bold" id="user-initial">A</div>
+                    <div class="text-sm overflow-hidden">
+                        <p class="truncate font-medium" id="user-name-display">Admin</p>
+                        <p class="truncate text-corporate-100 text-xs" id="user-role-display">Administrador</p>
+                    </div>
+                </div>
+                <button id="logout-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 md:ml-64 flex flex-col h-screen overflow-hidden">
+            <!-- Top Header (Mobile) -->
+            <header class="md:hidden bg-white shadow-sm h-16 flex items-center justify-between px-4 z-40">
+                <button id="open-sidebar-btn" class="text-gray-600 hover:text-gray-900">
+                    <i class="fa-solid fa-bars text-2xl"></i>
+                </button>
+                <span class="font-bold text-corporate-900">Formación Integral</span>
+                <div class="w-6"></div> <!-- Spacer -->
+            </header>
+
+            <!-- Dynamic Views Container -->
+            <div id="views-container" class="flex-1 overflow-y-auto p-4 md:p-8">
+                
+                <!-- VIEW: CRM & LEADS -->
+                <section id="view-crm" class="hidden fade-in space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <h2 class="text-2xl font-bold text-gray-800">Embudo Comercial (CRM)</h2>
+                        
+                        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                            <!-- Buscador del Embudo -->
+                            <div class="relative w-full sm:w-64">
+                                <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
+                                <input type="text" id="search-crm-input" placeholder="Buscar en embudo..." class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-corporate-500 focus:border-corporate-500 shadow-sm text-sm" oninput="renderCRM()">
+                            </div>
+                            
+                            <button onclick="openModal('modal-new-lead')" class="bg-corporate-800 text-white px-4 py-2 rounded-md hover:bg-corporate-900 flex items-center justify-center gap-2 shadow-sm shrink-0">
+                                <i class="fa-solid fa-plus"></i> Nuevo Interesado
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Kanban / Tablas de Fases -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Fase 1: Leads -->
+                        <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-gray-400">
+                            <h3 class="font-bold text-lg mb-4 flex justify-between">Fase 1: Interesados <span class="bg-gray-100 text-gray-600 px-2 rounded-full text-sm" id="count-fase1">0</span></h3>
+                            <div id="list-fase1" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"></div>
+                        </div>
+                        <!-- Fase 2: Cupos Apartados -->
+                        <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-yellow-400">
+                            <h3 class="font-bold text-lg mb-4 flex justify-between">Fase 2: Pre-matrícula <span class="bg-yellow-100 text-yellow-700 px-2 rounded-full text-sm" id="count-fase2">0</span></h3>
+                            <div id="list-fase2" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"></div>
+                        </div>
+                        <!-- Fase 3: Estudiantes Activos -->
+                        <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-green-500">
+                            <h3 class="font-bold text-lg mb-4 flex justify-between">Fase 3: Activos <span class="bg-green-100 text-green-700 px-2 rounded-full text-sm" id="count-fase3">0</span></h3>
+                            <div id="list-fase3" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: ASISTENCIA Y CAJA (ADMIN ONLY) -->
+                <section id="view-attendance" class="hidden fade-in space-y-6 admin-only-view">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <h2 class="text-2xl font-bold text-gray-800">Asistencia y Caja en Aula</h2>
+                        <button onclick="cerrarCaja()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center gap-2 shadow-sm font-bold">
+                            <i class="fa-solid fa-cash-register"></i> Cierre de Caja (Arqueo)
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Cohorte</label>
+                                <select id="filter-cohorte" class="w-full border-gray-300 rounded-md border p-2" onchange="renderAttendanceTable()">
+                                    <option value="">Todas las cohortes</option>
+                                    <option value="Montacargas - Domingos">Montacargas - Domingos</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2 flex items-end justify-end">
+                                <div class="bg-corporate-50 border border-corporate-200 p-3 rounded-lg flex items-center gap-4">
+                                    <div class="text-corporate-800">
+                                        <p class="text-xs font-semibold uppercase tracking-wider">Efectivo en Turno</p>
+                                        <p class="text-2xl font-bold" id="caja-actual-display">$0</p>
+                                    </div>
+                                    <i class="fa-solid fa-wallet text-3xl text-corporate-300"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estudiante</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contacto</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Asistencia</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deuda Restante</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recaudo (Abono)</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-tbody" class="bg-white divide-y divide-gray-200">
+                                    <!-- Generado por JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: ESTUDIANTES (ADMIN ONLY) -->
+                <section id="view-students" class="hidden fade-in space-y-6 admin-only-view">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <h2 class="text-2xl font-bold text-gray-800">Base de Estudiantes</h2>
+                        <button onclick="exportData('students')" class="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 flex items-center gap-2 shadow-sm admin-only">
+                            <i class="fa-solid fa-file-csv"></i> Exportar CSV
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm flex flex-col md:flex-row gap-4 mb-4">
+                        <input type="text" id="search-student" placeholder="Buscar por nombre o cédula..." class="flex-1 border-gray-300 rounded-md border p-2" oninput="renderStudentsTable()">
+                        <select id="filter-status" class="border-gray-300 rounded-md border p-2" onchange="renderStudentsTable()">
+                            <option value="">Todos los Estados</option>
+                            <option value="Activo">Activos</option>
+                            <option value="Egresado">Egresados</option>
+                        </select>
+                        <select id="filter-plan" class="border-gray-300 rounded-md border p-2" onchange="renderStudentsTable()">
+                            <option value="">Todos los Planes</option>
+                            <option value="Contado">Contado</option>
+                            <option value="Quincenal/Mensual">Quincenal/Mensual</option>
+                            <option value="Semanal">Semanal</option>
+                        </select>
+                    </div>
+
+                    <div class="table-container bg-white rounded-xl shadow-sm">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cédula</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Programa</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="students-tbody" class="bg-white divide-y divide-gray-200">
+                                <!-- Generado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- VIEW: HISTORIAL DE FACTURAS (ADMIN ONLY) -->
+                <section id="view-invoices" class="hidden fade-in space-y-6 admin-only-view">
+                    <h2 class="text-2xl font-bold text-gray-800">Historial de Facturas (Antiplagio)</h2>
+                    <p class="text-gray-500 text-sm mb-4">Puedes buscar cualquier factura o verificar el historial de pagos de un estudiante usando el código de recibo, cédula o nombre.</p>
+                    
+                    <div class="bg-white p-4 rounded-xl shadow-sm mb-4 border-l-4 border-corporate-500">
+                        <div class="relative flex items-center">
+                            <i class="fa-solid fa-search absolute left-4 text-gray-400 text-lg"></i>
+                            <input type="text" id="search-invoice-input" placeholder="Buscar por Cód. Factura (REC-...), Nombre o Cédula..." class="w-full border-gray-300 rounded-md border py-3 px-12 font-mono text-gray-700 bg-gray-50 focus:bg-white" oninput="renderInvoicesTable()">
+                        </div>
+                    </div>
+
+                    <div class="table-container bg-white rounded-xl shadow-sm">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cod. Factura</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estudiante</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cajero / Atendiente</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoices-tbody" class="bg-white divide-y divide-gray-200">
+                                <!-- Generado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- VIEW: DASHBOARD (ADMIN ONLY) -->
+                <section id="view-dashboard" class="hidden fade-in space-y-6 admin-only-view">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Dashboard Financiero</h2>
+                        <button onclick="exportData('finance')" class="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 flex items-center gap-2 shadow-sm hidden">
+                            <i class="fa-solid fa-file-excel"></i> Reporte
+                        </button>
+                    </div>
+
+                    <div class="bg-corporate-900 text-white p-6 rounded-xl shadow-md">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h3 class="text-lg font-medium text-corporate-100">Ingresos Recaudados</h3>
+                                <p class="text-4xl font-bold mt-1" id="dash-ingresos-periodo">$0</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-corporate-200 mb-1 uppercase tracking-wider">Filtrar por período</label>
+                                <select id="finance-period" onchange="renderDashboard()" class="bg-corporate-800 text-white border-corporate-700 rounded-md border p-2 focus:ring-corporate-500 focus:border-corporate-500">
+                                    <option value="diario">Hoy (Diario)</option>
+                                    <option value="semanal">Últimos 7 días (Semanal)</option>
+                                    <option value="quincenal">Últimos 15 días (Quincenal)</option>
+                                    <option value="mensual" selected>Últimos 30 días (Mensual)</option>
+                                    <option value="semestral">Últimos 6 meses (Semestral)</option>
+                                    <option value="anual">Último año (Anual)</option>
+                                    <option value="historico">Histórico Total</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                            <p class="text-sm font-medium text-gray-500">Proyección de Cartera (Por Cobrar)</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-2" id="dash-cartera">$0</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
+                            <p class="text-sm font-medium text-gray-500">Estudiantes Activos</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-2" id="dash-activos">0</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+                            <p class="text-sm font-medium text-gray-500">Egresados (Certificados)</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-2" id="dash-egresados">0</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="font-bold text-lg mb-4">Flujo de Ingresos Recientes</h3>
+                        <div class="relative h-72 w-full">
+                            <canvas id="financeChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: USUARIOS E INVITACIONES (ADMIN ONLY) -->
+                <section id="view-users" class="hidden fade-in space-y-6 admin-only-view">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Gestión de Usuarios</h2>
+                        <button onclick="openModal('modal-invite-user')" class="bg-corporate-800 text-white px-4 py-2 rounded-md hover:bg-corporate-900 flex items-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-user-plus"></i> Invitar Usuario
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm table-container">
+                        <h3 class="font-bold text-lg mb-4">Usuarios del Sistema</h3>
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Correo</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-tbody" class="bg-white divide-y divide-gray-200">
+                                <!-- Generado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- VIEW: AUDITORIA (ADMIN ONLY) -->
+                <section id="view-audit" class="hidden fade-in space-y-6 admin-only-view">
+                    <h2 class="text-2xl font-bold text-gray-800">Log de Auditoría (Anti-Fraude)</h2>
+                    <div class="bg-white rounded-xl shadow-sm p-4 table-container">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha y Hora</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario (Correo)</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acción Realizada</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-tbody" class="bg-white divide-y divide-gray-200 text-sm">
+                                <!-- Generado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- VIEW: AJUSTES / CONFIGURACIÓN (VISIBLE PARA TODOS) -->
+                <section id="view-settings" class="hidden fade-in space-y-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Ajustes del Sistema</h2>
+                    
+                    <!-- Pestañas de Navegación UI -->
+                    <div class="flex gap-4 border-b pb-2 overflow-x-auto">
+                        <button onclick="switchSettingsTab('gen')" id="tab-gen" class="tab-btn active px-2 whitespace-nowrap">Perfil General</button>
+                        <button onclick="switchSettingsTab('sys')" id="tab-sys" class="tab-btn text-gray-500 hover:text-corporate-800 px-2 whitespace-nowrap">Sistema / UI</button>
+                        <button onclick="switchSettingsTab('sec')" id="tab-sec" class="tab-btn text-gray-500 hover:text-corporate-800 px-2 whitespace-nowrap admin-only">Seguridad y Datos</button>
+                    </div>
+
+                    <!-- Contenido Pestañas -->
+                    <div id="settings-gen" class="grid grid-cols-1 md:grid-cols-2 gap-6 settings-content">
+                        <!-- Perfil -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <h3 class="font-bold text-lg mb-4 text-corporate-900"><i class="fa-solid fa-id-badge text-corporate-500"></i> Mi Perfil</h3>
+                            <div class="space-y-4 text-sm">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-gray-500 block text-xs uppercase tracking-wide">Nombre Completo</span>
+                                        <strong id="set-name" class="text-base text-gray-800"></strong>
+                                    </div>
+                                    <button onclick="editMyName()" class="text-corporate-600 hover:bg-corporate-50 px-3 py-1 rounded text-sm border"><i class="fa-solid fa-pen"></i> Editar</button>
+                                </div>
+                                <div><span class="text-gray-500 block text-xs uppercase tracking-wide">Correo de Acceso</span> <strong id="set-email" class="text-base text-gray-800"></strong></div>
+                                <div><span class="text-gray-500 block text-xs uppercase tracking-wide">Privilegios</span> <strong id="set-role" class="inline-block mt-1 px-3 py-1 bg-corporate-100 text-corporate-800 rounded-full text-xs font-bold"></strong></div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-center">
+                            <div>
+                                <i class="fa-solid fa-circle-check text-4xl text-green-500 mb-2"></i>
+                                <h3 class="font-bold text-gray-800">Sistema Activo</h3>
+                                <p class="text-xs text-gray-500 mt-1">Versión de software: 2.1.0<br>Formación Integral ERP</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="settings-sys" class="hidden settings-content">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-w-xl">
+                            <h3 class="font-bold text-lg mb-4">Preferencias de Interfaz</h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center py-2 border-b">
+                                    <span class="text-sm font-medium text-gray-700">Tema Oscuro (Modo Noche)</span>
+                                    <input type="checkbox" class="w-4 h-4 text-corporate-600 rounded cursor-not-allowed" disabled title="Próximamente">
+                                </div>
+                                <div class="flex justify-between items-center py-2 border-b">
+                                    <span class="text-sm font-medium text-gray-700">Notificaciones de Sonido</span>
+                                    <input type="checkbox" class="w-4 h-4 text-corporate-600 rounded" checked disabled>
+                                </div>
+                                <div class="flex justify-between items-center py-2">
+                                    <span class="text-sm font-medium text-gray-700">Exportación por Defecto</span>
+                                    <select class="border rounded p-1 text-sm text-gray-600"><option>CSV (Excel)</option></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ZONA DE PELIGRO (ADMIN ONLY) -->
+                    <div id="settings-sec" class="hidden settings-content admin-only-view">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-red-200 max-w-2xl">
+                            <h3 class="text-lg font-bold text-red-700 flex items-center gap-2 mb-2"><i class="fa-solid fa-triangle-exclamation"></i> Zona de Peligro Administrativa</h3>
+                            <p class="text-sm text-gray-600 mb-6">Estas acciones son estrictamente irreversibles y afectarán toda la base de datos de la institución en tiempo real. Utilízalas solo bajo protocolos de final de año o auditorías mayores.</p>
+                            
+                            <div class="border-t pt-4">
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                                    <div class="mb-3 sm:mb-0">
+                                        <h4 class="font-bold text-gray-800">Restaurar Sistema de Datos a Cero</h4>
+                                        <p class="text-xs text-gray-500 mt-1 max-w-md">Borra todo el historial de estudiantes, pagos, facturas (incluso los registros de facturas), caja y embudo. Las cuentas de administradores y asistentes permanecerán intactas para poder continuar operando.</p>
+                                    </div>
+                                    <button onclick="factoryReset()" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 font-bold flex items-center gap-2 shrink-0">
+                                        <i class="fa-solid fa-skull"></i> Limpiar Sistema
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: NUEVO INTERESADO -->
+    <div id="modal-new-lead" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="font-bold text-lg">Registrar Nuevo Interesado</h3>
+                <button onclick="closeModal('modal-new-lead')" class="text-gray-500 hover:text-gray-800"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <form id="form-new-lead" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Cédula</label>
+                        <input type="text" id="nl-cedula" required class="mt-1 w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                        <input type="text" id="nl-nombre" required class="mt-1 w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Teléfono / WhatsApp</label>
+                        <input type="tel" id="nl-tel" required class="mt-1 w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                        <input type="email" id="nl-correo" required class="mt-1 w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Dirección de Residencia</label>
+                        <input type="text" id="nl-direccion" class="mt-1 w-full border border-gray-300 rounded p-2" placeholder="Barrio, Calle, Número...">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Programa de Interés</label>
+                    <select id="nl-programa" required class="mt-1 w-full border border-gray-300 rounded p-2">
+                        <option value="Operador de Montacargas">Operador de Montacargas (3 meses)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Plan de Pago (Obligatorio para proyección)</label>
+                    <select id="nl-plan" required class="mt-1 w-full border border-gray-300 rounded p-2">
+                        <option value="Contado">Contado ($800.000 COP)</option>
+                        <option value="Quincenal/Mensual">Quincenal/Mensual ($900.000 COP - 2 cuotas de $450.000)</option>
+                        <option value="Semanal">Semanal ($1.000.000 COP - Cuotas de $100.000)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Cohorte Asignada</label>
+                    <select id="nl-cohorte" required class="mt-1 w-full border border-gray-300 rounded p-2">
+                        <option value="Montacargas - Domingos">Montacargas - Domingos</option>
+                    </select>
+                </div>
+                <div class="pt-4 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modal-new-lead')" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-50">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-corporate-800 text-white rounded hover:bg-corporate-900">Guardar Interesado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRO DE PAGO (RECIBO) -->
+    <div id="modal-payment" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="font-bold text-lg">Registrar Abono</h3>
+                <button onclick="closeModal('modal-payment')" class="text-gray-500 hover:text-gray-800"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="pay-student-id">
+                <p class="text-sm text-gray-600">Estudiante: <strong id="pay-student-name"></strong></p>
+                <p class="text-sm text-gray-600">Deuda Restante: <strong id="pay-student-debt" class="text-red-600"></strong></p>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Atendido por: <span class="text-xs text-gray-500">(Saldrá en factura)</span></label>
+                    <input type="text" id="pay-attendant-name" required class="mt-1 w-full border border-gray-300 rounded p-2 text-sm bg-gray-50 font-medium text-corporate-900">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Monto a Cancelar (COP)</label>
+                    <input type="number" id="pay-amount" min="1" required class="mt-1 w-full border border-gray-300 rounded p-2 text-lg font-bold text-green-700">
+                </div>
+                
+                <button onclick="processPayment()" class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Procesar y Generar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PERFIL DEL ESTUDIANTE -->
+    <div id="modal-profile" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-4 border-b bg-corporate-900 text-white rounded-t-xl">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-id-card"></i> Ficha Integral del Estudiante</h3>
+                <button onclick="closeModal('modal-profile')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="w-full md:w-1/3 flex flex-col items-center border-r pr-4">
+                        <div class="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center mb-4 text-gray-400 text-4xl">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <h4 class="font-bold text-lg text-center" id="prof-name"></h4>
+                        <p class="text-sm text-gray-500 mb-4" id="prof-cedula"></p>
+                        <span id="prof-status-badge" class="px-3 py-1 rounded-full text-sm font-bold"></span>
+                        
+                        <!-- Módulo Código de Barras -->
+                        <div id="barcode-module" class="mt-6 w-full text-center hidden">
+                            <p class="text-xs font-bold text-green-600 mb-1">CREDENCIAL PERMANENTE</p>
+                            <svg id="barcode-svg" class="w-full max-h-20"></svg>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-2/3 space-y-4">
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div><span class="text-gray-500 block">Programa</span><strong id="prof-program"></strong></div>
+                            <div><span class="text-gray-500 block">Cohorte</span><strong id="prof-cohort"></strong></div>
+                            <div><span class="text-gray-500 block">Contacto</span><strong id="prof-phone"></strong></div>
+                            <div><span class="text-gray-500 block">Dirección</span><strong id="prof-direccion"></strong></div>
+                            <div><span class="text-gray-500 block">Plan de Pago</span><strong id="prof-plan"></strong></div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg border">
+                            <h5 class="font-bold text-gray-700 mb-2 border-b pb-1">Estado de Cuenta</h5>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Valor Total:</span> <span id="prof-total" class="font-medium"></span>
+                            </div>
+                            <div class="flex justify-between text-sm mb-1 text-green-600">
+                                <span>Total Abonado:</span> <span id="prof-paid" class="font-bold"></span>
+                            </div>
+                            <div class="flex justify-between text-sm text-red-600 border-t pt-1 mt-1">
+                                <span>Saldo Pendiente:</span> <span id="prof-debt" class="font-bold"></span>
+                            </div>
+                        </div>
+                        <div class="pt-2 flex flex-wrap gap-2 admin-only">
+                            <button onclick="markAsEgresado()" class="flex-1 bg-purple-600 text-white px-3 py-2 rounded text-sm hover:bg-purple-700 font-bold"><i class="fa-solid fa-graduation-cap"></i> Marcar Egresado</button>
+                            <button onclick="exportProfilePDF()" class="flex-1 bg-gray-800 text-white px-3 py-2 rounded text-sm hover:bg-gray-900"><i class="fa-solid fa-file-pdf"></i> Exportar Ficha</button>
+                            <button onclick="resetStudentHistory()" class="w-full bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700 mt-2 font-bold"><i class="fa-solid fa-eraser"></i> Borrar Historial de Pagos</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: INVITAR USUARIO -->
+    <div id="modal-invite-user" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="font-bold text-lg">Generar Invitación</h3>
+                <button onclick="closeModal('modal-invite-user')" class="text-gray-500 hover:text-gray-800"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-sm text-gray-600 mb-4">Selecciona el rol para generar un enlace único de registro. El enlace solo servirá una vez.</p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Rol del nuevo usuario</label>
+                    <select id="invite-role-select" class="mt-1 w-full border border-gray-300 rounded p-2">
+                        <option value="asistente">Asistente Operativo</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <button onclick="generateInviteLink()" class="w-full px-4 py-2 bg-corporate-800 text-white rounded hover:bg-corporate-900">
+                    Generar Enlace
+                </button>
+                
+                <div id="invite-link-container" class="hidden mt-4 pt-4 border-t">
+                    <label class="block text-sm font-medium text-gray-700">Enlace de Invitación:</label>
+                    <div class="flex mt-1">
+                        <input type="text" id="invite-link-output" readonly class="w-full border border-gray-300 rounded-l p-2 bg-gray-50 text-sm">
+                        <button onclick="copyInviteLink()" class="bg-gray-200 border border-gray-300 border-l-0 rounded-r px-3 hover:bg-gray-300 text-gray-700">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-green-600 mt-2"><i class="fa-solid fa-circle-check"></i> Listo para copiar y enviar.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        /* ============================
+           DATA STORE & INITIALIZATION
+           ============================ */
+        const DB_KEY = 'formacion_integral_db';
+        let db = {
+            users: [],
+            students: [],
+            auditLog: [],
+            cashier: { currentCash: 0, lastClosed: null },
+            financialHistory: [],
+            invitations: [] 
+        };
+
+        let currentUser = null;
+        let chartInstance = null;
+
+        const formatMoney = (amount) => {
+            return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(amount);
+        };
+
+        function getBase64Image(imgElement) {
+            try {
+                const canvas = document.createElement("canvas");
+                canvas.width = imgElement.naturalWidth || imgElement.width || 500;
+                canvas.height = imgElement.naturalHeight || imgElement.height || 500;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(imgElement, 0, 0);
+                return canvas.toDataURL("image/jpeg");
+            } catch (e) {
+                console.warn("No se pudo cargar el logo local por CORS. Se omitirá la marca de agua.");
+                return null;
+            }
+        }
+
+        function initApp() {
+            const savedData = localStorage.getItem(DB_KEY);
+            if (savedData) {
+                db = JSON.parse(savedData);
+                if (!db.invitations) db.invitations = [];
+                if (!db.financialHistory) db.financialHistory = [];
+                
+                db.students.forEach(s => {
+                    if(s.direccion === undefined) s.direccion = '';
+                });
+
+                // Asegurar que los nuevos administradores se agreguen aunque exista caché previa
+                const defaultUsers = [
+                    { email: 'jcassianiteheran@gmail.com', password: '1002196405', role: 'admin', name: 'Juan Elías Cassiani Teheran' },
+                    { email: 'alexandrapedraza200@gmail.com', password: 'Madelyn2025', role: 'admin', name: 'Alexandra Pedraza' },
+                    { email: 'arrietalunasebastian@gmail.com', password: 'Abid-yulianis19', role: 'admin', name: 'Sebastian Arrieta' }
+                ];
+
+                defaultUsers.forEach(defaultUser => {
+                    if (!db.users.find(u => u.email === defaultUser.email)) {
+                        db.users.push(defaultUser);
+                    }
+                });
+                
+            } else {
+                db.users = [
+                    { email: 'jcassianiteheran@gmail.com', password: '1002196405', role: 'admin', name: 'Juan Elías Cassiani Teheran' },
+                    { email: 'alexandrapedraza200@gmail.com', password: 'Madelyn2025', role: 'admin', name: 'Alexandra Pedraza' },
+                    { email: 'arrietalunasebastian@gmail.com', password: 'Abid-yulianis19', role: 'admin', name: 'Sebastian Arrieta' }
+                ];
+                saveDB();
+            }
+
+            if (checkInviteToken()) return; 
+
+            const session = sessionStorage.getItem('session_user');
+            if (session) {
+                currentUser = JSON.parse(session);
+                showApp();
+            } else {
+                document.getElementById('login-view').classList.remove('hidden');
+            }
+        }
+
+        function saveDB() {
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+        }
+
+        function logAudit(action) {
+            if(!currentUser) return;
+            db.auditLog.unshift({
+                date: new Date().toLocaleString('es-CO'),
+                user: currentUser.email,
+                action: action
+            });
+            if(db.auditLog.length > 500) db.auditLog.pop(); 
+            saveDB();
+        }
+
+        /* ============================
+           AUTH & INVITATION LOGIC
+           ============================ */
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+
+            const user = db.users.find(u => u.email === email && u.password === pass);
+            if (user) {
+                currentUser = user;
+                sessionStorage.setItem('session_user', JSON.stringify(user));
+                logAudit('Inicio de sesión exitoso');
+                showApp();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Credenciales inválidas' });
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            logAudit('Cierre de sesión');
+            sessionStorage.removeItem('session_user');
+            currentUser = null;
+            document.getElementById('app-view').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('login-form').reset();
+        });
+
+        function checkInviteToken() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('invite');
+            
+            if (token) {
+                const invite = db.invitations.find(i => i.token === token && !i.used);
+                if (invite) {
+                    document.getElementById('login-view').classList.add('hidden');
+                    document.getElementById('invite-view').classList.remove('hidden');
+                    
+                    document.getElementById('invite-token').value = token;
+                    document.getElementById('invite-role').value = invite.role;
+                    document.getElementById('invite-role-display').textContent = invite.role === 'admin' ? 'Administrador' : 'Asistente';
+                    return true; 
+                } else {
+                    Swal.fire('Enlace Inválido', 'Este enlace ya fue utilizado o no existe.', 'error').then(() => {
+                        window.location.href = window.location.pathname; 
+                    });
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        document.getElementById('invite-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const token = document.getElementById('invite-token').value;
+            const role = document.getElementById('invite-role').value;
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+
+            if (db.users.find(u => u.email === email)) {
+                return Swal.fire('Error', 'Este correo ya está registrado en el sistema.', 'error');
+            }
+
+            const newUser = { email, password, role, name };
+            db.users.push(newUser);
+            
+            const inviteIndex = db.invitations.findIndex(i => i.token === token);
+            if(inviteIndex !== -1) db.invitations[inviteIndex].used = true;
+            
+            saveDB();
+            
+            Swal.fire('Registro Exitoso', 'Tu cuenta ha sido creada. Ingresando al sistema...', 'success').then(() => {
+                currentUser = newUser;
+                sessionStorage.setItem('session_user', JSON.stringify(newUser));
+                logAudit('Usuario registrado vía invitación');
+                
+                window.history.pushState({}, document.title, window.location.pathname);
+                document.getElementById('invite-view').classList.add('hidden');
+                showApp();
+            });
+        });
+
+        function showApp() {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('app-view').classList.remove('hidden');
+            
+            document.getElementById('user-initial').textContent = currentUser.name.charAt(0).toUpperCase();
+            document.getElementById('user-name-display').textContent = currentUser.name;
+            document.getElementById('user-role-display').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Asistente';
+            
+            // Populate Settings
+            document.getElementById('set-name').textContent = currentUser.name;
+            document.getElementById('set-email').textContent = currentUser.email;
+            document.getElementById('set-role').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Asistente';
+
+            buildSidebar();
+            applyRoleRestrictions();
+            switchView('view-crm'); 
+            
+            if(currentUser.role === 'admin') renderUsersTable();
+        }
+
+        /* ============================
+           UI & NAVIGATION
+           ============================ */
+        const sidebar = document.getElementById('sidebar');
+        document.getElementById('open-sidebar-btn').addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+        document.getElementById('close-sidebar-btn').addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+        function buildSidebar() {
+            const nav = document.getElementById('sidebar-nav');
+            
+            let linksHTML = `
+                <a href="#" onclick="switchView('view-crm')" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-corporate-800 text-gray-200 hover:text-white transition"><i class="fa-solid fa-filter w-5"></i> CRM & Embudo</a>
+            `;
+
+            if (currentUser.role === 'admin') {
+                linksHTML += `
+                    <a href="#" onclick="switchView('view-attendance')" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-corporate-800 text-gray-200 hover:text-white transition"><i class="fa-solid fa-clipboard-user w-5"></i> Asistencia y Caja</a>
+                    <a href="#" onclick="switchView('view-students')" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-corporate-800 text-gray-200 hover:text-white transition"><i class="fa-solid fa-users w-5"></i> Estudiantes</a>
+                    <a href="#" onclick="switchView('view-invoices')" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-corporate-800 text-gray-200 hover:text-white transition"><i class="fa-solid fa-file-invoice w-5"></i> Historial Facturas</a>
+                    <a href="#" onclick="switchView('view-dashboard')" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-corporate-800 text-gray-200 hover:text-white transition"><i class="fa-solid fa-chart-pie w-5"></i> Dashboard Financiero</a>
+                    <a href="#" onclick="switchView('view-users')" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-corporate-800 text-gray-200 hover:text-white transition"><i class="fa-solid fa-users-gear w-5"></i> Gestión Usuarios</a>
+                    <a href="#" onclick="switchView('view-audit')" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-corporate-800 text-gray-200 hover:text-white transition"><i class="fa-solid fa-shield-halved w-5"></i> Log Auditoría</a>
+                `;
+            }
+
+            linksHTML += `
+                <a href="#" onclick="switchView('view-settings')" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-corporate-800 text-gray-200 hover:text-white transition"><i class="fa-solid fa-gear w-5"></i> Ajustes</a>
+            `;
+            
+            nav.innerHTML = linksHTML;
+        }
+
+        function switchView(viewId) {
+            document.querySelectorAll('#views-container > section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+            if (window.innerWidth < 768) sidebar.classList.add('-translate-x-full'); 
+
+            if(viewId === 'view-crm') renderCRM();
+            if(viewId === 'view-attendance' && currentUser.role === 'admin') renderAttendanceTable();
+            if(viewId === 'view-students' && currentUser.role === 'admin') renderStudentsTable();
+            if(viewId === 'view-invoices' && currentUser.role === 'admin') renderInvoicesTable();
+            if(viewId === 'view-dashboard' && currentUser.role === 'admin') renderDashboard();
+            if(viewId === 'view-users' && currentUser.role === 'admin') renderUsersTable();
+            if(viewId === 'view-audit' && currentUser.role === 'admin') renderAudit();
+        }
+
+        function switchSettingsTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active', 'border-b-2', 'border-corporate-800', 'text-corporate-800', 'font-bold'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.add('text-gray-500'));
+            
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            activeBtn.classList.remove('text-gray-500');
+            activeBtn.classList.add('active', 'border-b-2', 'border-corporate-800', 'text-corporate-800', 'font-bold');
+
+            document.querySelectorAll('.settings-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById(`settings-${tab}`).classList.remove('hidden');
+        }
+
+        function applyRoleRestrictions() {
+            const adminElements = document.querySelectorAll('.admin-only');
+            adminElements.forEach(el => {
+                if (currentUser.role !== 'admin') el.style.display = 'none';
+                else el.style.display = '';
+            });
+            const adminViewElements = document.querySelectorAll('.admin-only-view');
+            adminViewElements.forEach(el => {
+                if (currentUser.role !== 'admin') el.classList.add('hidden');
+            });
+        }
+
+        function openModal(id) { 
+            document.getElementById(id).classList.remove('hidden'); 
+            if(id === 'modal-invite-user') {
+                document.getElementById('invite-link-container').classList.add('hidden');
+            }
+        }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        /* ============================
+           CRM & BUSINESS LOGIC
+           ============================ */
+        document.getElementById('form-new-lead').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const plan = document.getElementById('nl-plan').value;
+            
+            let totalVal = 800000;
+            if (plan === 'Quincenal/Mensual') totalVal = 900000;
+            if (plan === 'Semanal') totalVal = 1000000;
+            
+            const newStudent = {
+                id: Date.now().toString(),
+                cedula: document.getElementById('nl-cedula').value,
+                name: document.getElementById('nl-nombre').value,
+                phone: document.getElementById('nl-tel').value,
+                email: document.getElementById('nl-correo').value,
+                direccion: document.getElementById('nl-direccion').value,
+                program: document.getElementById('nl-programa').value,
+                plan: plan,
+                cohort: document.getElementById('nl-cohorte').value,
+                totalValue: totalVal,
+                totalPaid: 0,
+                debt: totalVal,
+                phase: 1, 
+                status: 'Activo', 
+                payments: []
+            };
+
+            db.students.push(newStudent);
+            logAudit(`Nuevo interesado registrado: ${newStudent.name}`);
+            saveDB();
+            closeModal('modal-new-lead');
+            e.target.reset();
+            Swal.fire('Éxito', 'Interesado registrado en el CRM', 'success');
+            renderCRM();
+        });
+
+        async function deleteStudent(id) {
+            const { value: code } = await Swal.fire({
+                title: 'Eliminar Persona Permanentemente',
+                text: "Ingrese el código de seguridad para eliminar:",
+                input: 'password',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (code === '0408') {
+                const student = db.students.find(s => s.id === id);
+                db.students = db.students.filter(s => s.id !== id);
+                
+                logAudit(`Eliminó al estudiante: ${student.name} (CC: ${student.cedula})`);
+                saveDB();
+                renderCRM();
+                Swal.fire('Eliminado', 'El registro ha sido eliminado con éxito.', 'success');
+            } else if (code) {
+                Swal.fire('Error', 'Código de seguridad incorrecto.', 'error');
+            }
+        }
+
+        function checkPhaseTransition(student) {
+            let reqInitial = 0;
+            if(student.plan === 'Contado') reqInitial = 800000;
+            else if(student.plan === 'Quincenal/Mensual') reqInitial = 450000;
+            else if(student.plan === 'Semanal') reqInitial = 100000;
+
+            if (student.totalPaid >= reqInitial) {
+                if(student.phase !== 3) logAudit(`Transición: ${student.name} pasó a ESTUDIANTE ACTIVO`);
+                student.phase = 3;
+            } else if (student.totalPaid > 0) {
+                if(student.phase !== 2) logAudit(`Transición: ${student.name} pasó a CUPO APARTADO`);
+                student.phase = 2;
+            } else {
+                student.phase = 1; 
+            }
+        }
+
+        function renderCRM() {
+            const searchInput = document.getElementById('search-crm-input');
+            const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+            const list1 = document.getElementById('list-fase1');
+            const list2 = document.getElementById('list-fase2');
+            const list3 = document.getElementById('list-fase3');
+            list1.innerHTML = ''; list2.innerHTML = ''; list3.innerHTML = '';
+            let c1=0, c2=0, c3=0;
+
+            let students = db.students.filter(s => s.status === 'Activo');
+            
+            if(query) {
+                students = students.filter(s => s.name.toLowerCase().includes(query) || s.cedula.includes(query));
+            }
+
+            students.forEach(s => {
+                const card = `
+                    <div class="border border-gray-200 p-3 rounded-lg bg-gray-50 hover:bg-white transition shadow-sm relative group cursor-pointer" onclick="showProfile('${s.id}')">
+                        <div class="flex justify-between items-start">
+                            <p class="font-bold text-gray-800 text-sm">${s.name}</p>
+                            <button onclick="event.stopPropagation(); deleteStudent('${s.id}')" class="text-gray-400 hover:text-red-600 bg-white border rounded px-2 py-0.5 shadow-sm transition" title="Eliminar persona">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500">${s.program}</p>
+                        <div class="flex justify-between mt-2 items-center">
+                            <span class="text-xs font-semibold text-red-500">Deuda: ${formatMoney(s.debt)}</span>
+                            <button onclick="event.stopPropagation(); openPaymentModal('${s.id}')" class="bg-corporate-100 text-corporate-800 px-2 py-1 rounded text-xs hover:bg-corporate-200"><i class="fa-solid fa-coins"></i> Abono</button>
+                        </div>
+                    </div>`;
+                if(s.phase === 1) { list1.innerHTML += card; c1++; }
+                else if(s.phase === 2) { list2.innerHTML += card; c2++; }
+                else { list3.innerHTML += card; c3++; }
+            });
+            document.getElementById('count-fase1').textContent = c1;
+            document.getElementById('count-fase2').textContent = c2;
+            document.getElementById('count-fase3').textContent = c3;
+        }
+
+        /* ============================
+           PAYMENTS, CAJA & INVOICES
+           ============================ */
+        let currentPayId = null;
+        function openPaymentModal(id) {
+            const student = db.students.find(s => s.id === id);
+            currentPayId = id;
+            document.getElementById('pay-student-name').textContent = student.name;
+            document.getElementById('pay-student-debt').textContent = formatMoney(student.debt);
+            document.getElementById('pay-amount').max = student.debt;
+            document.getElementById('pay-amount').value = '';
+            document.getElementById('pay-attendant-name').value = currentUser.name;
+            openModal('modal-payment');
+        }
+
+        function processPayment() {
+            const amount = parseFloat(document.getElementById('pay-amount').value);
+            const attendantName = document.getElementById('pay-attendant-name').value.trim();
+            const student = db.students.find(s => s.id === currentPayId);
+            
+            if (!attendantName) return Swal.fire('Error', 'Debe especificar quién atendió el pago', 'error');
+            if (isNaN(amount) || amount <= 0) return Swal.fire('Error', 'Monto inválido', 'error');
+            if (amount > student.debt) return Swal.fire('Error', 'El monto supera la deuda', 'error');
+
+            const receiptId = `REC-${Date.now().toString().slice(-6)}-${student.cedula.slice(-4)}`;
+            const dateStr = new Date().toISOString();
+
+            student.totalPaid += amount;
+            student.debt -= amount;
+            const payRecord = { id: receiptId, date: dateStr, amount: amount, receiver: attendantName };
+            student.payments.push(payRecord);
+            
+            db.cashier.currentCash += amount;
+            db.financialHistory.push({ 
+                date: dateStr, amount: amount, type: 'ingreso', studentId: student.id, 
+                receiptId: receiptId, receiver: attendantName, studentName: student.name, 
+                studentCedula: student.cedula, program: student.program, plan: student.plan
+            });
+
+            checkPhaseTransition(student);
+            logAudit(`Pago registrado [${receiptId}]: ${formatMoney(amount)} - Est. ${student.name}`);
+            saveDB();
+            
+            closeModal('modal-payment');
+            renderCRM();
+            if(currentUser.role === 'admin') {
+                if(!document.getElementById('view-attendance').classList.contains('hidden')) renderAttendanceTable();
+                if(!document.getElementById('view-dashboard').classList.contains('hidden')) renderDashboard();
+                if(!document.getElementById('view-invoices').classList.contains('hidden')) renderInvoicesTable();
+            }
+
+            generatePDFReceipt(student, amount, dateStr, attendantName, receiptId);
+        }
+
+        function generatePDFReceipt(studentInfo, amount, dateStr, attendantName, receiptId, isCopy = false) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // MARCA DE AGUA DEL LOGO
+            const imgElement = document.getElementById('corporate-logo');
+            const base64Logo = getBase64Image(imgElement);
+            if (base64Logo) {
+                doc.setGState(new doc.GState({opacity: 0.1}));
+                doc.addImage(base64Logo, 'JPEG', 30, 70, 150, 150);
+                doc.setGState(new doc.GState({opacity: 1.0}));
+            }
+
+            // TEXTOS Y DATOS
+            doc.setFontSize(22);
+            doc.setTextColor(30, 58, 138);
+            doc.text("FORMACIÓN INTEGRAL", 105, 20, { align: "center" });
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text("NIT: 1001904179-4 | Recibo Digital Automático", 105, 28, { align: "center" });
+            
+            doc.setDrawColor(200, 200, 200);
+            doc.line(20, 35, 190, 35);
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(14);
+            const tituloRecibo = isCopy ? "COMPROBANTE DE INGRESO (COPIA REIMPRESA)" : "COMPROBANTE DE INGRESO";
+            doc.text(tituloRecibo, 20, 50);
+            
+            doc.setFontSize(11);
+            doc.text(`Factura No: ${receiptId}`, 20, 60);
+            doc.text(`Fecha: ${new Date(dateStr).toLocaleString('es-CO')}`, 20, 67);
+            doc.text(`Atendido por: ${attendantName}`, 20, 74);
+            
+            doc.text(`Estudiante: ${studentInfo.name || studentInfo.studentName} (CC: ${studentInfo.cedula || studentInfo.studentCedula})`, 20, 88);
+            doc.text(`Programa: ${studentInfo.program}`, 20, 95);
+            doc.text(`Plan Académico: ${studentInfo.plan}`, 20, 102);
+            
+            doc.setFillColor(240, 240, 240);
+            doc.rect(20, 115, 170, 35, 'F');
+            
+            doc.setFontSize(14);
+            doc.text("DETALLE FINANCIERO", 25, 125);
+            doc.setFontSize(12);
+            doc.text(`Valor Abonado: ${formatMoney(amount)}`, 25, 135);
+            
+            doc.setTextColor(220, 38, 38);
+            if (studentInfo.debt !== undefined) {
+                doc.text(`Saldo Restante Posterior: ${typeof studentInfo.debt === 'number' ? formatMoney(studentInfo.debt) : studentInfo.debt}`, 25, 143);
+            }
+
+            // CÓDIGO DE BARRAS
+            try {
+                JsBarcode("#hidden-barcode-canvas", receiptId, { 
+                    format: "CODE128", displayValue: false, height: 40, margin: 0
+                });
+                const barcodeDataUrl = document.getElementById("hidden-barcode-canvas").toDataURL("image/png");
+                doc.addImage(barcodeDataUrl, 'PNG', 135, 45, 55, 15);
+            } catch(e) {
+                console.warn("No se pudo generar el código de barras en el PDF.");
+            }
+
+            doc.setTextColor(100, 100, 100);
+            doc.setFontSize(10);
+            doc.text("Este documento es constancia del dinero recibido. Cero devoluciones.", 105, 270, { align: "center" });
+
+            doc.save(`Factura_${receiptId}${isCopy ? '_copia' : ''}.pdf`);
+            
+            if(!isCopy) {
+                Swal.fire({
+                    icon: 'success', title: 'Pago Procesado',
+                    text: 'El abono se registró y el recibo PDF ha sido descargado.',
+                    confirmButtonColor: '#1e40af'
+                });
+            }
+        }
+
+        /* HISTORIAL DE FACTURAS (TABLA - ADMIN ONLY) */
+        function renderInvoicesTable() {
+            if (currentUser.role !== 'admin') return;
+            const query = document.getElementById('search-invoice-input').value.toLowerCase().trim();
+            const tbody = document.getElementById('invoices-tbody');
+            tbody.innerHTML = '';
+
+            let records = db.financialHistory.filter(f => f.type === 'ingreso' && f.receiptId);
+            
+            if(query) {
+                records = records.filter(f => 
+                    f.receiptId.toLowerCase().includes(query) ||
+                    f.studentName.toLowerCase().includes(query) ||
+                    f.studentCedula.includes(query)
+                );
+            }
+
+            records.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            records.forEach(f => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-mono font-bold text-corporate-800">${f.receiptId}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${new Date(f.date).toLocaleString('es-CO')}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${f.studentName}</div>
+                        <div class="text-xs text-gray-500">${f.studentCedula}</div>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-green-700">${formatMoney(f.amount)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${f.receiver || 'Admin'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                        <button onclick="reprintInvoice('${f.receiptId}')" class="text-corporate-600 hover:text-corporate-900 font-bold"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function reprintInvoice(receiptId) {
+            const record = db.financialHistory.find(f => f.receiptId === receiptId);
+            if (!record) return Swal.fire('Error', 'Factura no encontrada', 'error');
+            
+            const student = db.students.find(s => s.id === record.studentId);
+            let currentDebt = student ? student.debt : 'N/A (Estudiante fue eliminado)';
+
+            const mockStudentInfo = {
+                studentName: record.studentName,
+                studentCedula: record.studentCedula,
+                program: record.program,
+                plan: record.plan,
+                debt: currentDebt
+            };
+
+            generatePDFReceipt(mockStudentInfo, record.amount, record.date, record.receiver, receiptId, true);
+            logAudit(`Reimprimió copia de factura: ${receiptId}`);
+        }
+
+        /* CAJA AULA (ADMIN ONLY) */
+        function renderAttendanceTable() {
+            if (currentUser.role !== 'admin') return;
+            const filter = document.getElementById('filter-cohorte').value;
+            const tbody = document.getElementById('attendance-tbody');
+            document.getElementById('caja-actual-display').textContent = formatMoney(db.cashier.currentCash);
+            tbody.innerHTML = '';
+
+            let students = db.students.filter(s => s.phase === 3 && s.status === 'Activo');
+            if (filter) students = students.filter(s => s.cohort === filter);
+
+            students.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${s.name}</div>
+                        <div class="text-xs text-gray-500">${s.cedula}</div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${s.phone}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-center">
+                        <input type="checkbox" class="w-5 h-5 text-corporate-600 border-gray-300 rounded focus:ring-corporate-500 cursor-pointer">
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-bold text-red-600">${formatMoney(s.debt)}</td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <input type="number" id="quick-pay-${s.id}" placeholder="Monto" class="border rounded p-1 w-24 text-sm" ${s.debt === 0 ? 'disabled' : ''}>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm">
+                        <button onclick="processQuickPayment('${s.id}')" class="bg-corporate-100 text-corporate-800 px-3 py-1 rounded hover:bg-corporate-200 font-medium" ${s.debt === 0 ? 'disabled' : ''}>Cobrar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function processQuickPayment(id) {
+            const input = document.getElementById(`quick-pay-${id}`);
+            const amount = parseFloat(input.value);
+            if (isNaN(amount) || amount <= 0) return Swal.fire('Error', 'Ingrese un monto válido', 'error');
+            
+            openPaymentModal(id);
+            document.getElementById('pay-amount').value = amount; 
+        }
+
+        function cerrarCaja() {
+            if(db.cashier.currentCash === 0) return Swal.fire('Info', 'La caja está en $0', 'info');
+            
+            Swal.fire({
+                title: '¿Confirmar Cierre de Caja?',
+                text: "Se generará el reporte y el contador volverá a $0.",
+                icon: 'warning', showCancelButton: true, confirmButtonColor: '#10b981', cancelButtonColor: '#d1d5db',
+                confirmButtonText: 'Sí, Cerrar Caja'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const totalCierre = db.cashier.currentCash;
+                    logAudit(`Cierre de Caja: ${formatMoney(totalCierre)}`);
+                    db.cashier.currentCash = 0;
+                    db.cashier.lastClosed = new Date().toISOString();
+                    saveDB();
+                    renderAttendanceTable();
+                    renderDashboard(); 
+                    Swal.fire({
+                        icon: 'success', title: 'Arqueo Exitoso',
+                        html: `<b>Reporte Ciego de Cierre:</b><br><br>Efectivo a entregar:<br><span style="font-size: 24px; color: #059669; font-weight: bold;">${formatMoney(totalCierre)}</span>`,
+                    });
+                }
+            });
+        }
+
+        /* ============================
+           PROFILES & DB WIPES
+           ============================ */
+        function renderStudentsTable() {
+            if (currentUser.role !== 'admin') return;
+            const search = document.getElementById('search-student').value.toLowerCase();
+            const status = document.getElementById('filter-status').value;
+            const plan = document.getElementById('filter-plan').value;
+            const tbody = document.getElementById('students-tbody');
+            tbody.innerHTML = '';
+
+            let filtered = db.students.filter(s => s.phase === 3 || s.status === 'Egresado');
+            
+            if(search) filtered = filtered.filter(s => s.name.toLowerCase().includes(search) || s.cedula.includes(search));
+            if(status) filtered = filtered.filter(s => s.status === status);
+            if(plan) filtered = filtered.filter(s => s.plan === plan);
+
+            filtered.forEach(s => {
+                const badgeColor = s.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${s.cedula}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${s.name}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${s.program}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${s.plan}</td>
+                    <td class="px-4 py-3 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeColor}">${s.status}</span></td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                        <button onclick="showProfile('${s.id}')" class="text-corporate-600 hover:text-corporate-900 font-bold"><i class="fa-solid fa-eye"></i> Perfil</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        let currentProfileId = null;
+        function showProfile(id) {
+            currentProfileId = id;
+            const s = db.students.find(x => x.id === id);
+            document.getElementById('prof-name').textContent = s.name;
+            document.getElementById('prof-cedula').textContent = `CC: ${s.cedula}`;
+            document.getElementById('prof-program').textContent = s.program;
+            document.getElementById('prof-cohort').textContent = s.cohort;
+            document.getElementById('prof-phone').textContent = s.phone;
+            document.getElementById('prof-direccion').textContent = s.direccion || 'No registrada';
+            document.getElementById('prof-plan').textContent = s.plan;
+            
+            document.getElementById('prof-total').textContent = formatMoney(s.totalValue);
+            document.getElementById('prof-paid').textContent = formatMoney(s.totalPaid);
+            document.getElementById('prof-debt').textContent = formatMoney(s.debt);
+
+            const badge = document.getElementById('prof-status-badge');
+            badge.textContent = s.status;
+            badge.className = `px-3 py-1 rounded-full text-sm font-bold ${s.status === 'Activo' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}`;
+
+            const barcodeDiv = document.getElementById('barcode-module');
+            if (s.status === 'Egresado' && s.debt === 0) {
+                barcodeDiv.classList.remove('hidden');
+                JsBarcode("#barcode-svg", s.cedula, { format: "CODE128", displayValue: true, height: 40 });
+            } else {
+                barcodeDiv.classList.add('hidden');
+            }
+
+            openModal('modal-profile');
+        }
+
+        function markAsEgresado() {
+            const s = db.students.find(x => x.id === currentProfileId);
+            if(s.debt > 0) return Swal.fire('Bloqueado', 'Debe tener saldo $0 para ser Egresado.', 'warning');
+            s.status = 'Egresado';
+            logAudit(`Cambio estado: ${s.name} a EGRESADO`);
+            saveDB();
+            showProfile(currentProfileId);
+            if (currentUser.role === 'admin') {
+                renderStudentsTable();
+                if(!document.getElementById('view-dashboard').classList.contains('hidden')) renderDashboard();
+            }
+            Swal.fire('Actualizado', 'Estudiante marcado como Egresado', 'success');
+        }
+
+        // RESETEAR HISTORIAL DEL ESTUDIANTE 
+        async function resetStudentHistory() {
+            const { value: code } = await Swal.fire({
+                title: 'Borrar Historial del Estudiante',
+                input: 'password',
+                inputLabel: 'Ingrese el código de seguridad',
+                inputPlaceholder: '4 dígitos',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444'
+            });
+
+            if (code === '0716') {
+                const s = db.students.find(x => x.id === currentProfileId);
+                
+                s.totalPaid = 0;
+                s.debt = s.totalValue;
+                s.payments = [];
+                s.status = 'Activo';
+                checkPhaseTransition(s); 
+                
+                db.financialHistory = db.financialHistory.filter(f => f.studentId !== s.id);
+                
+                saveDB();
+                logAudit(`Historial borrado para: ${s.name} (CC: ${s.cedula})`);
+                Swal.fire('Éxito', 'El historial de pagos de esta persona ha quedado en cero.', 'success');
+                
+                showProfile(currentProfileId);
+                renderCRM();
+                if (currentUser.role === 'admin') {
+                    renderStudentsTable();
+                    if(!document.getElementById('view-invoices').classList.contains('hidden')) renderInvoicesTable();
+                    if(!document.getElementById('view-dashboard').classList.contains('hidden')) renderDashboard();
+                }
+            } else if (code) {
+                Swal.fire('Error', 'Código de seguridad incorrecto.', 'error');
+            }
+        }
+
+        // RESTAURAR SISTEMA A CERO 
+        async function factoryReset() {
+            const { value: code } = await Swal.fire({
+                title: 'PELIGRO: Restaurar Sistema a Cero',
+                input: 'password',
+                inputLabel: 'Ingrese el código de seguridad maestro',
+                inputPlaceholder: '4 dígitos',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444'
+            });
+
+            if (code === '0408') {
+                db.students = [];
+                db.auditLog = [];
+                db.cashier = { currentCash: 0, lastClosed: null };
+                db.financialHistory = [];
+                db.invitations = [];
+                
+                saveDB();
+                
+                Swal.fire({
+                    icon: 'success', title: 'Sistema Formateado', text: 'El sistema ha sido limpiado por completo. La página se recargará.'
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else if (code) {
+                Swal.fire('Error', 'Código de seguridad maestro incorrecto.', 'error');
+            }
+        }
+
+        /* ============================
+           DASHBOARD & ADMIN FINANCES
+           ============================ */
+        function renderDashboard() {
+            if(currentUser.role !== 'admin') return;
+            
+            let totalCartera = 0;
+            let activos = 0;
+            let egresados = 0;
+
+            db.students.forEach(s => {
+                totalCartera += s.debt;
+                if(s.status === 'Activo' && s.phase === 3) activos++;
+                if(s.status === 'Egresado') egresados++;
+            });
+
+            document.getElementById('dash-cartera').textContent = formatMoney(totalCartera);
+            document.getElementById('dash-activos').textContent = activos;
+            document.getElementById('dash-egresados').textContent = egresados;
+
+            const period = document.getElementById('finance-period').value;
+            let incomePeriodTotal = 0;
+            const now = new Date();
+            
+            db.financialHistory.forEach(record => {
+                const rDate = new Date(record.date);
+                let include = false;
+                
+                const diffTime = Math.abs(now - rDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (period === 'diario' && now.toDateString() === rDate.toDateString()) include = true;
+                else if (period === 'semanal' && diffDays <= 7) include = true;
+                else if (period === 'quincenal' && diffDays <= 15) include = true;
+                else if (period === 'mensual' && diffDays <= 30) include = true;
+                else if (period === 'semestral' && diffDays <= 180) include = true;
+                else if (period === 'anual' && diffDays <= 365) include = true;
+                else if (period === 'historico') include = true;
+
+                if(include) incomePeriodTotal += record.amount;
+            });
+
+            document.getElementById('dash-ingresos-periodo').textContent = formatMoney(incomePeriodTotal);
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+
+            const labels = ['D6', 'D5', 'D4', 'D3', 'D2', 'Ayer', 'Hoy'];
+            const data = [0,0,0,0,0,0, db.cashier.currentCash]; 
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ingresos Diarios', data: data,
+                        backgroundColor: '#3b82f6', borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        /* ============================
+           USER EDIT & MANAGEMENT
+           ============================ */
+        async function editMyName() {
+            const { value: newName } = await Swal.fire({
+                title: 'Editar Mi Nombre',
+                input: 'text',
+                inputValue: currentUser.name,
+                showCancelButton: true,
+                inputValidator: (value) => {
+                    if (!value || value.trim() === '') return 'El nombre no puede estar vacío';
+                }
+            });
+
+            if (newName) {
+                currentUser.name = newName.trim();
+                const userIndex = db.users.findIndex(u => u.email === currentUser.email);
+                if (userIndex !== -1) db.users[userIndex].name = currentUser.name;
+                
+                sessionStorage.setItem('session_user', JSON.stringify(currentUser));
+                saveDB();
+                
+                document.getElementById('set-name').textContent = currentUser.name;
+                document.getElementById('user-name-display').textContent = currentUser.name;
+                document.getElementById('user-initial').textContent = currentUser.name.charAt(0).toUpperCase();
+                
+                logAudit(`El usuario actualizó su nombre a: ${currentUser.name}`);
+                Swal.fire({
+                    icon: 'success', title: 'Actualizado', 
+                    text: 'Tu nombre ha sido modificado. Las próximas facturas saldrán con tu nuevo nombre.',
+                    timer: 2000, showConfirmButton: false
+                });
+                if(currentUser.role === 'admin' && !document.getElementById('view-users').classList.contains('hidden')) renderUsersTable();
+            }
+        }
+
+        async function editUserByAdmin(email) {
+            const userToEdit = db.users.find(u => u.email === email);
+            if(!userToEdit) return;
+
+            const { value: newName } = await Swal.fire({
+                title: 'Editar Nombre de Usuario',
+                input: 'text',
+                inputValue: userToEdit.name,
+                showCancelButton: true,
+                inputValidator: (value) => {
+                    if (!value || value.trim() === '') return 'El nombre no puede estar vacío';
+                }
+            });
+
+            if (newName) {
+                userToEdit.name = newName.trim();
+                
+                if (currentUser.email === email) {
+                    currentUser.name = newName.trim();
+                    sessionStorage.setItem('session_user', JSON.stringify(currentUser));
+                    document.getElementById('set-name').textContent = currentUser.name;
+                    document.getElementById('user-name-display').textContent = currentUser.name;
+                    document.getElementById('user-initial').textContent = currentUser.name.charAt(0).toUpperCase();
+                }
+                
+                saveDB();
+                logAudit(`Admin editó el nombre del usuario ${email} a: ${userToEdit.name}`);
+                renderUsersTable();
+                Swal.fire({
+                    icon: 'success', title: 'Actualizado', text: 'El nombre del usuario ha sido modificado.',
+                    timer: 2000, showConfirmButton: false
+                });
+            }
+        }
+
+        function renderUsersTable() {
+            if(currentUser.role !== 'admin') return;
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '';
+            
+            db.users.forEach(u => {
+                const badge = u.role === 'admin' ? 'bg-corporate-100 text-corporate-800' : 'bg-green-100 text-green-800';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap font-medium text-gray-900">${u.name}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">${u.email}</td>
+                    <td class="px-4 py-2 whitespace-nowrap"><span class="px-2 py-1 text-xs rounded font-bold ${badge}">${u.role.toUpperCase()}</span></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm">
+                        <button onclick="editUserByAdmin('${u.email}')" class="text-corporate-600 hover:text-corporate-900 border rounded px-2 py-1"><i class="fa-solid fa-pen"></i> Editar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function generateInviteLink() {
+            const role = document.getElementById('invite-role-select').value;
+            const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            
+            db.invitations.push({ token: token, role: role, used: false });
+            saveDB();
+            
+            const baseUrl = window.location.origin + window.location.pathname;
+            const inviteUrl = `${baseUrl}?invite=${token}`;
+            
+            document.getElementById('invite-link-output').value = inviteUrl;
+            document.getElementById('invite-link-container').classList.remove('hidden');
+            logAudit(`Generó enlace de invitación para rol: ${role}`);
+        }
+
+        function copyInviteLink() {
+            const linkInput = document.getElementById('invite-link-output');
+            linkInput.select();
+            document.execCommand("copy");
+            Swal.fire({
+                icon: 'success', title: 'Copiado', text: 'Enlace copiado al portapapeles. ¡Envíalo!', timer: 1500, showConfirmButton: false
+            });
+        }
+
+        /* ============================
+           AUDIT LOG & EXPORT
+           ============================ */
+        function renderAudit() {
+            if(currentUser.role !== 'admin') return;
+            const tbody = document.getElementById('audit-tbody');
+            tbody.innerHTML = '';
+            
+            db.auditLog.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap text-gray-500">${log.date}</td>
+                    <td class="px-4 py-2 whitespace-nowrap font-medium text-gray-900">${log.user}</td>
+                    <td class="px-4 py-2 text-gray-700">${log.action}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportData(type) {
+            if(type === 'students') {
+                let csvContent = "data:text/csv;charset=utf-8,Cedula,Nombre,Direccion,Programa,Plan,Total,Pagado,Deuda,Estado\n";
+                db.students.forEach(s => {
+                    const safeDireccion = s.direccion ? `"${s.direccion}"` : '""';
+                    csvContent += `${s.cedula},${s.name},${safeDireccion},${s.program},${s.plan},${s.totalValue},${s.totalPaid},${s.debt},${s.status}\n`;
+                });
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "Base_Estudiantes.csv");
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                logAudit('Exportó base de datos CSV');
+            }
+        }
+
+        function exportProfilePDF() {
+            const s = db.students.find(x => x.id === currentProfileId);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(20);
+            doc.text("Ficha Académica - Formación Integral", 20, 20);
+            doc.setFontSize(12);
+            doc.text(`Nombre: ${s.name}`, 20, 35);
+            doc.text(`Cédula: ${s.cedula}`, 20, 42);
+            doc.text(`Dirección: ${s.direccion || 'No registrada'}`, 20, 49);
+            doc.text(`Programa: ${s.program}`, 20, 56);
+            doc.text(`Cohorte: ${s.cohort}`, 20, 63);
+            doc.text(`Estado: ${s.status}`, 20, 70);
+            doc.text(`Deuda Actual: ${formatMoney(s.debt)}`, 20, 82);
+            
+            doc.save(`Perfil_${s.cedula}.pdf`);
+            logAudit(`Exportó PDF del perfil: ${s.cedula}`);
+        }
+
+        // Init App on Load
+        window.onload = initApp;
+    </script>
+</body>
+</html>
